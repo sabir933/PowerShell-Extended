@@ -1,0 +1,44 @@
+$kaust = "C:\Lab\A"
+$planFail = Join-Path $kaust "plan.txt"
+$aruanne = "C:\Lab\report.txt"
+
+"" | Out-File $aruanne -Encoding utf8
+
+if (-Not (Test-Path $kaust)) {
+    New-Item -Path $kaust -ItemType Directory
+    Add-Content $aruanne "Kaust A loodud."
+} else {
+    Add-Content $aruanne "Kaust A juba olemas."
+}
+
+if (Test-Path $planFail) {
+    # Fail on olemas, lisame lõppu kuupäeva ja kellaaja
+    $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Add-Content $planFail "Uuendatud: $now"
+} else {
+    # Faili pole, loome ja kirjutame esimese rea
+    "Esimene rida $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))" | Out-File $planFail -Encoding utf8
+}
+
+$failiInfo = Get-Item $planFail
+$muutmisaeg = $failiInfo.LastWriteTime
+$aegErinevus = (Get-Date) - $muutmisaeg
+
+if ($aegErinevus.TotalDays -gt 1) {
+    Add-Content $aruanne "Fail plan.txt on aegunud."
+} else {
+    Add-Content $aruanne "Fail plan.txt on ajakohane."
+}
+
+for ($i = 1; $i -le 5; $i++) {
+    $failiNimi = Join-Path $kaust "task$i.txt"
+    if (-Not (Test-Path $failiNimi)) {
+        New-Item -Path $failiNimi -ItemType File | Out-Null
+    }
+}
+
+Add-Content $aruanne "Kaustas A olevad failid koos viimase muutmise ajaga:"
+Get-ChildItem $kaust | ForEach-Object {
+    $nimi = $_.Name
+    $muutmisaegStr = $_.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+    Add-Content $aruanne "$nimi - $muutmisaegStr"
