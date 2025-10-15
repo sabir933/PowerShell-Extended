@@ -1,0 +1,38 @@
+$teenusNimi = "Spooler"
+$logiKaust = "C:\Lab\logs"
+$logiFail = Join-Path $logiKaust "svc.log"
+$aruanne = "C:\Lab\report.txt"
+
+if (-Not (Test-Path $logiKaust)) {
+    New-Item -Path $logiKaust -ItemType Directory | Out-Null
+}
+
+function Get-ServiceStatus($name) {
+    $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
+    if ($null -eq $svc) {
+        return "NotFound"
+    }
+    return $svc.Status.ToString()
+}
+
+$olek = Get-ServiceStatus $teenusNimi
+$tegevus = "ilma tegevuseta"
+
+if ($olek -eq "Running") {
+    Restart-Service -Name $teenusNimi -Force
+    $tegevus = "taaskäivitatud"
+} elseif ($olek -eq "Stopped") {
+    Start-Service -Name $teenusNimi
+    $tegevus = "käivitatud"
+} else {
+    $tegevus = "ilma tegevuseta"
+}
+
+Start-Sleep -Seconds 2 
+$uusOlek = Get-ServiceStatus $teenusNimi
+
+$now = Get-Date -Format "yyyy-MM-dd HH:mm"
+$logiRida = "$now $teenusNimi: $tegevus -> $uusOlek"
+Add-Content $logiFail $logiRida
+
+Add-Content $aruanne "`nViimane teenuse logi rida:`n$logiRida"
