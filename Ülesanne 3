@@ -1,0 +1,63 @@
+$serviceName = "Spooler"
+$logDir = "C:\Lab\logs"
+$logFile = Join-Path $logDir "svc.log"
+$reportFile = "C:\Lab\report.txt"
+
+if (-not (Test-Path $logDir)) {
+    try {
+        New-Item -Path $logDir -ItemType Directory -ErrorAction Stop | Out-Null
+    } catch {
+        Write-Error "Не удалось создать папку для логов: $_"
+        exit
+    }
+}
+
+function Get-ServiceStatusSafe($name) {
+    try {
+        $svc = Get-Service -Name $name -ErrorAction Stop
+        return $svc.Status.ToString()
+    } catch {
+        Write-Warning "Служба $name не найдена."
+        return "NotFound"
+    }
+}
+
+$oldStatus = Get-ServiceStatusSafe $serviceName
+$action = "без действия"
+
+try {
+    if ($oldStatus -eq "Running") {
+        Restart-Service -Name $serviceName -Force -ErrorAction Stop
+        $action = "перезапущена"
+    } elseif ($oldStatus -eq "Stopped") {
+        Start-Service -Name $serviceName -ErrorAction Stop
+        $action = "запущена"
+    } elseif ($oldStatus -eq "NotFound") {
+        $action = "служба не найдена"
+    } else {
+        # Другой статус, например Paused
+        $action = "без действия"
+    }
+} catch {
+    Write-Warning "Ошибка при управлении службой: $_"
+    $action = "ошибка при управлении"
+}
+
+Start-Sleep -Seconds 3
+
+$newStatus = Get-ServiceStatusSafe $serviceName
+
+$timeStamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+$logLine = "$timeStamp $serviceName: $action -> $newStatus"
+
+try {
+    Add-Content -Path $logFile -Value $logLine -ErrorAction Stop
+} catch {
+    Write-Warning "Ошибка при записи лога: $_"
+}
+
+try {
+    Add-Content -Path $reportFile -Value "`nПоследняя запись лога:`n$logLine" -ErrorAction Stop
+} catch {
+    Write-Warning "Ошибка при записи отчёта: $_"
+}
